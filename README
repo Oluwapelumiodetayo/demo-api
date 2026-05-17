@@ -1,0 +1,34 @@
+# Demo API
+
+A small FastAPI service — 3 endpoints, 5 tests. Built as Week 5
+of my Get Hired in 6 Months journey.
+
+## Endpoints
+
+| Method | Path | What it does |
+|--------|------|--------------|
+| GET | /health | Liveness check — returns 200 + status |
+| GET | /regions | Lists all AWS regions EC2 runs in |
+| GET | /tokens?length=N | Returns a URL-safe random token (8-128 chars) |
+
+## Run locally
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8080
+```
+
+Open http://localhost:8080/docs for auto-generated Swagger UI.
+
+## Tests
+
+```bash
+pytest -v
+```
+
+## What's next
+
+Week 6: this API in a Docker container.
+Week 7: running on AWS ECS Fargate behind an ALB.
+Week 8: logs + alarms in CloudWatch.
