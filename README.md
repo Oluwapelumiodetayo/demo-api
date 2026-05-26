@@ -1,140 +1,127 @@
-# Demo API — Containerised FastAPI + Postgres (AWS DevOps Project)
+Demo API — Containerised FastAPI + Postgres (AWS DevOps Project)
 
 ## Overview
 
-This project is a production-style containerised FastAPI application built as part of a DevOps learning journey. It demonstrates how to build, containerise, and run a multi-service system using Docker and Docker Compose, and how to deploy static web assets to AWS S3.
+This project is a production-style containerised FastAPI application built as part of a DevOps learning journey. It demonstrates how to build, containerise, and deploy a microservice using Docker, Amazon ECR, and ECS Fargate with a load-balanced architecture.
 
 The stack includes:
 
-* FastAPI backend API
-* PostgreSQL database
-* Docker multi-stage build
-* Docker Compose orchestration
-* AWS S3 static hosting
-* AWS CloudFront distribution (CDN)
+FastAPI backend API  
+PostgreSQL database (local development)  
+Docker multi-stage build  
+Docker Compose orchestration  
+AWS Elastic Container Registry (ECR)  
+AWS ECS Fargate (serverless containers)  
+Application Load Balancer (ALB)  
 
 ---
 
 ## Architecture
 
 Local Development:
-FastAPI API  →  PostgreSQL (Docker container)
+FastAPI API → PostgreSQL (Docker container)
 
 Production Deployment:
-Astro build → AWS S3 → CloudFront CDN → Public HTTPS website
+Docker Image → ECR → ECS Fargate Task → ALB → Public Internet
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint         | Description                   |
-| ------ | ---------------- | ----------------------------- |
-| GET    | /health          | Service health check          |
-| GET    | /regions         | Lists AWS EC2 regions         |
-| GET    | /tokens?length=N | Generates secure random token |
-| GET    | /db              | Tests PostgreSQL connection   |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /health | Service health check |
+| GET | /regions | Lists AWS EC2 regions |
+| GET | /tokens?length=N | Generates secure random token |
+| GET | /db | Tests PostgreSQL connection |
 
 ---
 
-## How to Run Locally (Docker)
+## Live Production URL (AWS ECS + ALB)
 
-### 1. Clone repository
+Base URL:
+http://demo-alb-361957588.us-east-1.elb.amazonaws.com
 
-git clone https://github.com/Oluwapelumiodetayo/aws-astro-blog.git
-cd demo-api
+Test endpoints:
+- /health
+- /tokens
+- /db
 
-### 2. Build and start services
-
-docker compose up --build
-
-### 3. Test API
-
-http://localhost:8080/docs
-
-or
-
-curl http://localhost:8080/health
-curl http://localhost:8080/db
+Example:
+curl http://demo-alb-361957588.us-east-1.elb.amazonaws.com/health
 
 ---
 
-## Docker Setup
+## Docker Setup (Local)
 
-### Build image
-
+Build image:
 docker build -t demo-api .
 
-### Run container
-
+Run container:
 docker run -p 8080:8080 demo-api
 
-### Check running containers
-
-docker ps
+Test locally:
+http://localhost:8080/docs
 
 ---
 
-## AWS Deployment (Static Website)
+## AWS Deployment (ECR + ECS Fargate)
 
-### S3 Deployment
+### 1. Build and push image to ECR
 
-* Built static Astro site using `npm run build`
+docker tag demo-api:v1 160823835026.dkr.ecr.us-east-1.amazonaws.com/demo-api:v1
 
-* Synced output folder to S3 bucket:
-  aws s3 sync ./dist s3://my-astro-blog-oluwapelumi-2026
+docker push 160823835026.dkr.ecr.us-east-1.amazonaws.com/demo-api:v1
 
-* Enabled S3 Static Website Hosting
+---
 
-* Configured index document: index.html
+### 2. ECS Fargate Service
 
-### CloudFront CDN
+- Cluster: demo-cluster  
+- Service: demo-svc  
+- Task Definition: demo-api:2  
+- Execution Role: ecsTaskExecutionRole  
+- Network Mode: awsvpc  
+- CPU: 0.25 vCPU  
+- Memory: 512 MB  
 
-* Created CloudFront distribution using S3 website endpoint
-* Enabled global CDN caching
-* Served site via HTTPS CloudFront domain
+---
+
+### 3. Load Balancer
+
+- Type: Application Load Balancer  
+- Name: demo-alb  
+- Target Group: demo-tg  
+- Listener: HTTP :80  
+- Health Check: /health  
 
 ---
 
 ## Key DevOps Concepts Demonstrated
 
-* Containerisation using Docker (multi-stage builds)
-* Service orchestration using Docker Compose
-* Environment isolation with containers
-* Microservice communication (API ↔ DB)
-* Infrastructure as a Service (AWS S3)
-* Content Delivery Network (CloudFront)
-* Static website hosting architecture
-* Build reproducibility and deployment automation
-
----
-
-## Project Structure
-
-demo-api/
-├── main.py
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-├── .dockerignore
-├── test_main.py
-└── README.md
+- Containerisation using Docker
+- Image registry workflow using Amazon ECR
+- Serverless containers with ECS Fargate
+- Load balancing with ALB
+- Health checks and service discovery
+- Production-style deployment pipeline
 
 ---
 
 ## What I Learned
 
-* How to containerise a FastAPI application
-* How to connect multiple services using Docker Compose
-* How to deploy static websites to AWS S3
-* How CloudFront improves performance and security
-* How production systems are structured in real environments
+- How container images move from local → ECR → ECS
+- How ECS tasks are replaced without downtime
+- How ALB routes traffic to healthy tasks
+- How IAM roles (ecsTaskExecutionRole) enable task execution
+- How real production AWS architectures are structured
 
 ---
 
 ## Next Steps
 
-* Deploy API to AWS ECS Fargate
-* Add CI/CD pipeline using GitHub Actions
-* Add monitoring with CloudWatch
-* Add authentication layer (JWT)
+- Add CI/CD with GitHub Actions  
+- Add CloudWatch logging and alarms  
+- Add authentication (JWT)  
+- Move to HTTPS with ACM + Route53  
 
