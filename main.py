@@ -1,3 +1,5 @@
+import os
+import psycopg2
 import secrets
 import boto3
 from fastapi import FastAPI, HTTPException
@@ -30,3 +32,19 @@ def tokens(length: int = 32) -> dict:
         raise HTTPException(status_code=400, detail="length must be between 8 and 128")
     return {"token": secrets.token_urlsafe(length)}
 
+@app.get("/db")
+def db_version() -> dict:
+    url = os.environ.get("DATABASE_URL")
+
+    if not url:
+        raise HTTPException(status_code=503, detail="DATABASE_URL not set")
+
+    try:
+        with psycopg2.connect(url) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT version()")
+                row = cur.fetchone()
+                return {"postgres": row[0] if row else "unknown"}
+
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"DB error: {e}")
