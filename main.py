@@ -1,23 +1,65 @@
-import os
-import psycopg2
+import json
+import sys
+import time
+import uuid
 import secrets
+import os
+
 import boto3
-from fastapi import FastAPI, HTTPException
+import psycopg2
+
+from fastapi import FastAPI, HTTPException, Request
 
 app = FastAPI(title="Demo API")
 
 
+def log(level: str, **fields) -> None:
+    sys.stdout.write(json.dumps({"level": level, **fields}) + "\n")
+    sys.stdout.flush()
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    correlation_id = request.headers.get("x-correlation-id") or str(uuid.uuid4())
+
+    try:
+        response = await call_next(request)
+
+        log(
+            "info",
+            event="request",
+            method=request.method,
+            path=request.url.path,
+            status=response.status_code,
+            duration_ms=round((time.time() - start) * 1000, 2),
+            correlation_id=correlation_id,
+        )
+
+        response.headers["x-correlation-id"] = correlation_id
+        return response
+
+    except Exception as e:
+        log(
+            "error",
+            event="request_failed",
+            method=request.method,
+            path=request.url.path,
+            error=str(e),
+            correlation_id=correlation_id,
+        )
+        raise
+
+
 @app.get("/health")
 def health() -> dict:
-    """Load balancers ping this. If we return anything other than 200, they stop sending traffic."""
     return {"status": "ok"}
 
 
 @app.get("/regions")
 def regions() -> dict:
-    """Return all AWS regions the EC2 service is available in."""
     try:
-        ec2 = boto3.client("ec2", region_name="eu-west-2")
+        ec2 = boto3.client("ec2", region_name="us-east-1")
         data = ec2.describe_regions()
         names = [r["RegionName"] for r in data["Regions"]]
         return {"count": len(names), "regions": names}
@@ -27,10 +69,11 @@ def regions() -> dict:
 
 @app.get("/tokens")
 def tokens(length: int = 32) -> dict:
-    """Generate a URL-safe random token. Great for session IDs, reset tokens, etc."""
     if length < 8 or length > 128:
         raise HTTPException(status_code=400, detail="length must be between 8 and 128")
+
     return {"token": secrets.token_urlsafe(length)}
+
 
 @app.get("/db")
 def db_version() -> dict:
@@ -48,3 +91,4 @@ def db_version() -> dict:
 
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"DB error: {e}")
+
