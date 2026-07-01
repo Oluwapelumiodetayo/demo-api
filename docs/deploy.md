@@ -32,7 +32,7 @@ Response:
 
 curl http://demo-alb-361957588.us-east-1.elb.amazonaws.com/tokens
 Response:
-{"token":"REDACTED_TOKEN"}
+{"token":"<example-token>"}
 
 ---
 
